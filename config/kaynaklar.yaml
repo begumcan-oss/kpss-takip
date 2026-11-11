@@ -10,15 +10,8 @@
 
 kaynaklar:
   - ad: kariyerkapisi.gov.tr
-    rss: ["https://kariyerkapisi.gov.tr/RSS/RssLinkiAl"]
+    rss: ["https://kariyerkapisi.gov.tr/RSS"]
     render: true
-
-  - ad: kariyerkapisi.gov.tr (sayfa)
-    baslangic: ["https://kariyerkapisi.gov.tr/isealim"]
-    render: true
-    bekle: 9000
-    metin_filtresi: true
-    derinlik: 0
 
   - ad: ilan.gov.tr
     baslangic: ["https://www.ilan.gov.tr/ilan/tum-ilanlar/personel-alimi?ats=5"]
