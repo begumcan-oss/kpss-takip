@@ -12,6 +12,7 @@ kaynaklar:
   - ad: kariyerkapisi.gov.tr
     rss: ["https://kariyerkapisi.gov.tr/RSS"]
     render: true
+    anahtar_surumu: 2
 
   - ad: ilan.gov.tr
     baslangic: ["https://www.ilan.gov.tr/ilan/tum-ilanlar/personel-alimi?ats=5"]
