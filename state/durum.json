@@ -284,10 +284,10 @@
   "iskur.gov.tr": 0,
   "iskur.gov.tr (işçi)": 0,
   "iskur.gov.tr (memur)": 0,
-  "kamuilan.sbb.gov.tr": 1,
-  "kariyerkapisi.gov.tr": 1,
+  "kamuilan.sbb.gov.tr": 2,
+  "kariyerkapisi.gov.tr": 2,
   "osym.gov.tr": 0,
-  "resmigazete.gov.tr": 0
+  "resmigazete.gov.tr": 1
  },
  "gorulen": {
   "0338ff24d07e57a9": "2026-11-11",
@@ -449,9 +449,7 @@
  },
  "kuruldu": "2026-11-11",
  "son_hatalar": {
-  "ana": [
-   "kariyerkapisi.gov.tr"
-  ]
+  "ana": []
  },
  "son_saglik": "2026-11-11"
 }
