@@ -75,7 +75,19 @@ def _alan(u):
     return h[4:] if h.startswith("www.") else h
 
 
-def rss_tara(ayar, timeout=25):
+def _kaydet(klasor, ad, ek, icerik):
+    if not klasor:
+        return
+    p = pathlib.Path(klasor)
+    p.mkdir(parents=True, exist_ok=True)
+    yol = p / f"{re.sub(r'[^a-z0-9]+', '_', ad.lower())}{ek}"
+    if isinstance(icerik, bytes):
+        yol.write_bytes(icerik)
+    else:
+        yol.write_text(icerik, encoding="utf-8")
+
+
+def rss_tara(ayar, timeout=25, hata_ayiklama_klasoru=None):
     """RSS/Atom beslemesindeki her öğeyi aday ilan olarak döndürür."""
     from .indir import http_get
     adaylar, son_hata = [], ""
@@ -86,6 +98,7 @@ def rss_tara(ayar, timeout=25):
             son_hata = kisa_hata(e)
             continue
         icerik = r.content
+        _kaydet(hata_ayiklama_klasoru, ayar["ad"], "_rss.txt", icerik)
         if b"<item" not in icerik and b"<entry" not in icerik:
             # RSS bağlantısını veren bir sayfa olabilir: içindeki besleme adresini bul
             soup = BeautifulSoup(r.text, "lxml")
@@ -131,6 +144,13 @@ def ilan_sayfasini_bol(url, kaynak, timeout=30):
     from .indir import http_get
     r = http_get(url, timeout=timeout)
     soup = BeautifulSoup(r.text, "lxml")
+    alt_ilanlar = []
+    for metin_, u in baglantilar(r.url, r.text):
+        if re.search(r"\d{8}-\d+-\d+\.(htm|pdf)", u):
+            alt_ilanlar.append(Aday(baslik=metin_ or u, url=u, kaynak=kaynak))
+    if alt_ilanlar:
+        log.info("%s: bölümde %d ayrı ilan bağlantısı var", kaynak, len(alt_ilanlar))
+        return alt_ilanlar
     for t in soup(["script", "style"]):
         t.decompose()
     metin = re.sub(r"[ \t\xa0]+", " ", soup.get_text("\n"))
@@ -139,6 +159,7 @@ def ilan_sayfasini_bol(url, kaynak, timeout=30):
     if len(parcalar) < 2:
         basliklar = [m.start() for m in _RG_BASLIK.finditer(metin)]
         parcalar = [metin[a:b] for a, b in zip(basliklar, basliklar[1:] + [len(metin)])] or [metin]
+    log.info("%s: sayfa %d parçaya bölündü", kaynak, len(parcalar))
     adaylar = []
     for i, p in enumerate(parcalar):
         p = p.strip()
@@ -158,7 +179,7 @@ def ilan_sayfasini_bol(url, kaynak, timeout=30):
 def kaynak_tara(ayar, tarayici=None, hata_ayiklama_klasoru=None, timeout=25):
     """Bir kaynağı tarar, Aday listesi döndürür. Hiçbir sayfa açılamazsa hata fırlatır."""
     if ayar.get("rss"):
-        return rss_tara(ayar, timeout)
+        return rss_tara(ayar, timeout, hata_ayiklama_klasoru)
     ad = ayar["ad"]
     render = ayar.get("render", False)
     aday_desen = re.compile(ayar["aday_url_desen"], re.I) if ayar.get("aday_url_desen") else None
@@ -180,7 +201,8 @@ def kaynak_tara(ayar, tarayici=None, hata_ayiklama_klasoru=None, timeout=25):
             continue
         ziyaret.add(url)
         try:
-            son_url, html = html_getir(url, render=render, tarayici=tarayici, timeout=timeout)
+            son_url, html = html_getir(url, render=render, tarayici=tarayici, timeout=timeout,
+                                       bekle=ayar.get("bekle", 2500))
         except Exception as e:
             son_hata = kisa_hata(e)
             log.info("%s: %s açılamadı (%s)", ad, url, e)
@@ -194,6 +216,8 @@ def kaynak_tara(ayar, tarayici=None, hata_ayiklama_klasoru=None, timeout=25):
             p = pathlib.Path(hata_ayiklama_klasoru)
             p.mkdir(parents=True, exist_ok=True)
             (p / f"{re.sub(r'[^a-z0-9]+', '_', ad.lower())}.html").write_text(html, encoding="utf-8")
+            if tarayici is not None and getattr(tarayici, "son_istekler", None):
+                _kaydet(p, ad, "_istekler.txt", "\n".join(tarayici.son_istekler))
 
         for metin, u in baglantilar(son_url, html):
             mn = norm(metin)
@@ -226,6 +250,9 @@ def kaynak_tara(ayar, tarayici=None, hata_ayiklama_klasoru=None, timeout=25):
         bolunmus = []
         for a in adaylar.values():
             try:
+                if hata_ayiklama_klasoru:
+                    from .indir import http_get
+                    _kaydet(hata_ayiklama_klasoru, ad, "_bolum.html", http_get(a.url).text)
                 bolunmus.extend(ilan_sayfasini_bol(a.url, ad))
             except Exception as e:
                 log.info("%s: %s bölünemedi (%s)", ad, a.url, e)

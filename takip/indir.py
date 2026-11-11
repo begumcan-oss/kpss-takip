@@ -65,7 +65,8 @@ class Tarayici:
         self._browser = None
         self.calisiyor = True
 
-    def ac(self, url):
+    def ac(self, url, bekle=2500):
+        self.son_istekler = []
         if not self.calisiyor:
             return None
         try:
@@ -74,13 +75,27 @@ class Tarayici:
                 self._pw = sync_playwright().start()
                 self._browser = self._pw.chromium.launch()
             sayfa = self._browser.new_page(user_agent=UA, locale="tr-TR")
+
+            def yanit(r):
+                try:
+                    tur = r.headers.get("content-type", "")
+                    if "json" in tur or "xml" in tur:
+                        govde = ""
+                        try:
+                            govde = r.text()[:4000]
+                        except Exception:
+                            pass
+                        self.son_istekler.append(f"{r.request.method} {r.url}\n{tur}\n{govde}\n")
+                except Exception:
+                    pass
+            sayfa.on("response", yanit)
             try:
                 sayfa.goto(url, wait_until="domcontentloaded", timeout=45000)
                 try:
                     sayfa.wait_for_load_state("networkidle", timeout=20000)
                 except Exception:
                     pass
-                sayfa.wait_for_timeout(2500)
+                sayfa.wait_for_timeout(bekle)
                 return sayfa.url, sayfa.content()
             finally:
                 sayfa.close()
@@ -102,10 +117,10 @@ class Tarayici:
             pass
 
 
-def html_getir(url, render=False, tarayici=None, timeout=25):
+def html_getir(url, render=False, tarayici=None, timeout=25, bekle=2500):
     """(son_adres, html) döndürür."""
     if render and tarayici is not None:
-        sonuc = tarayici.ac(url)
+        sonuc = tarayici.ac(url, bekle=bekle)
         if sonuc:
             return sonuc
     r = http_get(url, timeout=timeout)
