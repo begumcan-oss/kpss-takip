@@ -80,14 +80,44 @@ def _tarihler(s):
             pass
 
 
-def son_basvuru_bul(tn):
-    en_gec = None
-    for m in re.finditer(r"basvuru", tn):
-        pencere = tn[max(0, m.start() - 120): m.end() + 160]
-        for d in _tarihler(pencere):
-            if en_gec is None or d > en_gec:
-                en_gec = d
-    return en_gec
+_EN_AYLAR = {"january": 1, "february": 2, "march": 3, "april": 4, "may": 5, "june": 6, "july": 7,
+             "august": 8, "september": 9, "october": 10, "november": 11, "december": 12}
+
+
+def baslik_tarihi(baslik):
+    """Başlıktaki en yeni tarihi (yoksa yılı) döndürür."""
+    bn = norm(baslik)
+    tarihler = list(_tarihler(bn))
+    for g, ay, y in re.findall(r"\b(\d{1,2})\s+(" + "|".join(_EN_AYLAR) + r")\s+(20\d{2})\b", bn):
+        try:
+            tarihler.append(date(int(y), _EN_AYLAR[ay], int(g)))
+        except ValueError:
+            pass
+    if tarihler:
+        return max(tarihler)
+    yillar = [int(y) for y in re.findall(r"\b(20\d{2})\b", bn)]
+    return date(max(yillar), 12, 31) if yillar else None
+
+
+def eski_mi(baslik, bugun, gun=60):
+    from datetime import timedelta
+    t = baslik_tarihi(baslik)
+    return bool(t and t < bugun - timedelta(days=gun))
+
+
+def son_basvuru_bul(tn, bugun=None):
+    from datetime import timedelta
+    ust = (bugun + timedelta(days=240)) if bugun else None
+
+    def topla(desen, once, sonra):
+        bulunan = []
+        for m in re.finditer(desen, tn):
+            pencere = tn[max(0, m.start() - once): m.end() + sonra]
+            bulunan += [d for d in _tarihler(pencere) if not ust or d <= ust]
+        return bulunan
+
+    tarihler = topla(r"son basvuru", 40, 120) or topla(r"basvuru", 120, 160)
+    return max(tarihler) if tarihler else None
 
 
 def lisans_var(tn):
@@ -274,6 +304,8 @@ def degerlendir(aday, metin, profil, bugun, ilce_haritasi):
 
     if any(k in baslik_n for k in AKADEMIK):
         return Degerlendirme(False, "akademik ilan")
+    if eski_mi(aday.baslik, bugun):
+        return Degerlendirme(False, "eski ilan")
     if not any(k in tn for k in PERSONEL_KELIMELERI):
         return Degerlendirme(False, "personel ilanı değil")
 
@@ -295,7 +327,7 @@ def degerlendir(aday, metin, profil, bugun, ilce_haritasi):
     if bulunan and not hedef_bulunan:
         return Degerlendirme(False, "şehirler dışında")
 
-    son = son_basvuru_bul(tn)
+    son = son_basvuru_bul(tn, bugun)
     if son and son < bugun:
         return Degerlendirme(False, "başvuru süresi geçmiş")
 

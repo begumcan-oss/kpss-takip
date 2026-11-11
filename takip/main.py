@@ -11,7 +11,8 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 
 from . import ayarlar, belediye, osym
-from .eslestir import degerlendir, ilce_haritasi_yap
+from .eslestir import degerlendir, eski_mi, ilce_haritasi_yap
+from .metin import norm
 from .indir import Tarayici, ilan_metni
 from .telegram import Telegram, e
 
@@ -121,7 +122,8 @@ def calistir(mod, kuru=False):
                 adaylar.extend(bulunan)
             except Exception as ex:
                 log.warning("%s: %s", kaynak["ad"], ex)
-                hatalar.append(kaynak["ad"])
+                neden = str(ex).split("(")[-1].rstrip(")") if "(" in str(ex) else ""
+                hatalar.append(f"{kaynak['ad']} ({neden})" if neden else kaynak["ad"])
         durum.d["son_hatalar"]["ana"] = hatalar
 
     if mod in ("belediye", "hepsi"):
@@ -144,6 +146,10 @@ def calistir(mod, kuru=False):
     gonderilecek = []
     for a in tekil:
         if a.tur == "osym":
+            bn = norm(a.baslik)
+            if "ekpss" in bn or "engelli" in bn or eski_mi(a.baslik, bugun, gun=30):
+                durum.isaretle(a.anahtarlar())
+                continue
             gonderilecek.append(((-1, 0), a, osym.isle(a, profil)))
             continue
         metin = metinler.get(a.url)

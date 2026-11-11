@@ -29,15 +29,15 @@ PERSONEL_KELIMELERI = [
     "personel alim", "personel alin", "memur alim", "memur alin", "isci alim",
     "isci alin", "eleman alim", "personel temin", "istihdam edil",
     "sozlesmeli personel", "surekli isci", "zabita memuru", "itfaiye eri",
-    "kpss", "alim ilani", "personel ilani", "kadro ilani", "personel istihdam",
-    "gecici isci", "is ilani", "kamu ilani",
+    "kpss ile", "kpss puan", "atanmak uzere", "alim ilani", "alimi ilani",
+    "personel ilani", "kadro ilani", "personel istihdam", "gecici isci", "is ilani", "kamu ilani",
 ]
 
 # Bağlantı metninde geçerse ilan sayılmayacak ifadeler (sonuç, ihale vb.)
 HARIC_BAGLANTI = [
     "ihale", "kiralama", "kiraya", "satis", "sonuc", "liste", "mulakat",
     "sinav yeri", "sozlu sinav", "yazili sinav", "kesin kayit", "evrak teslim",
-    "iptal", "yerlestirme", "basarili aday",
+    "iptal", "yerlestirme", "basarili aday", "kurs", "hazirlik", "yetistir", "egitim programi",
 ]
 
 AKADEMIK = [
@@ -50,3 +50,14 @@ def personel_baglantisi_mi(metin_n: str) -> bool:
     return any(k in metin_n for k in PERSONEL_KELIMELERI) and not any(
         h in metin_n for h in HARIC_BAGLANTI
     )
+
+
+def kisa_hata(e) -> str:
+    import requests
+    if isinstance(e, requests.exceptions.Timeout):
+        return "zaman aşımı"
+    if isinstance(e, requests.exceptions.HTTPError) and e.response is not None:
+        return f"HTTP {e.response.status_code}"
+    if isinstance(e, requests.exceptions.ConnectionError):
+        return "bağlantı kurulamadı"
+    return type(e).__name__

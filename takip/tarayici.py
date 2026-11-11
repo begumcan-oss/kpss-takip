@@ -12,7 +12,7 @@ from urllib.parse import urljoin, urlparse
 from bs4 import BeautifulSoup
 
 from .indir import html_getir
-from .metin import anahtar, norm, personel_baglantisi_mi, HARIC_BAGLANTI
+from .metin import anahtar, kisa_hata, norm, personel_baglantisi_mi, HARIC_BAGLANTI
 
 log = logging.getLogger("takip")
 
@@ -87,7 +87,7 @@ def kaynak_tara(ayar, tarayici=None, hata_ayiklama_klasoru=None, timeout=25):
 
     kuyruk = [(u, 0) for u in ayar["baslangic"]]
     ziyaret, adaylar = set(), {}
-    acilan, takip_sayisi = 0, 0
+    acilan, takip_sayisi, son_hata = 0, 0, ""
     kok_alanlar = {_alan(u) for u in ayar["baslangic"]}
 
     while kuyruk:
@@ -98,8 +98,13 @@ def kaynak_tara(ayar, tarayici=None, hata_ayiklama_klasoru=None, timeout=25):
         try:
             son_url, html = html_getir(url, render=render, tarayici=tarayici, timeout=timeout)
         except Exception as e:
+            son_hata = kisa_hata(e)
             log.info("%s: %s açılamadı (%s)", ad, url, e)
-            continue
+            sonuc = tarayici.ac(url) if (tarayici is not None and not render) else None
+            if not sonuc:
+                continue
+            son_url, html = sonuc
+            log.info("%s: tarayıcıyla açıldı", ad)
         acilan += 1
         if hata_ayiklama_klasoru and d == 0:
             p = pathlib.Path(hata_ayiklama_klasoru)
@@ -132,5 +137,5 @@ def kaynak_tara(ayar, tarayici=None, hata_ayiklama_klasoru=None, timeout=25):
                     takip_sayisi += 1
 
     if acilan == 0:
-        raise RuntimeError("siteye ulaşılamadı")
+        raise RuntimeError(f"siteye ulaşılamadı ({son_hata or 'bilinmiyor'})")
     return list(adaylar.values())

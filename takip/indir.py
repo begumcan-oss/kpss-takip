@@ -1,6 +1,7 @@
 """Web sayfası ve PDF indirme. Gerekirse sayfayı gerçek bir tarayıcıda (Playwright) açar."""
 import io
 import logging
+import re
 import threading
 from urllib.parse import urljoin
 
@@ -129,13 +130,40 @@ def ilan_metni(url, render=False, tarayici=None, ek_pdf=2) -> str:
     return _html_isle(r.url, r.text, ek_pdf)
 
 
+_GURULTU = re.compile(r"(menu|navbar|nav-|footer|sidebar|breadcrumb|cookie|social|share|related|"
+                      r"benzer|diger|son-haber|sonhaber|populer|slider|banner|widget)", re.I)
+_ICERIK = re.compile(r"(content|icerik|detay|detail|article|post|haber-?metin|entry)", re.I)
+
+
+def ana_icerik(soup):
+    """Sayfanın menü/kenar çubuğu gibi kısımlarını atıp asıl metin bloğunu döndürür."""
+    for t in soup(["script", "style", "noscript", "nav", "header", "footer", "aside", "form", "iframe"]):
+        t.decompose()
+    for t in soup.find_all(True):
+        if getattr(t, "decomposed", False) or t.attrs is None:
+            continue
+        kimlik = " ".join(t.get("class", []) or []) + " " + (t.get("id") or "")
+        if t.name not in ("body", "html", "main", "article") and _GURULTU.search(kimlik):
+            t.decompose()
+    adaylar = soup.find_all(["article", "main"])
+    for t in soup.find_all(True):
+        if getattr(t, "decomposed", False) or t.attrs is None:
+            continue
+        kimlik = " ".join(t.get("class", []) or []) + " " + (t.get("id") or "")
+        if _ICERIK.search(kimlik):
+            adaylar.append(t)
+    adaylar = [a for a in adaylar if len(a.get_text(" ", strip=True)) >= 80]
+    if adaylar:
+        return max(adaylar, key=lambda a: len(a.get_text(" ", strip=True)))
+    return soup.body or soup
+
+
 def _html_isle(url, html, ek_pdf):
     soup = BeautifulSoup(html, "lxml")
-    for t in soup(["script", "style", "noscript"]):
-        t.decompose()
-    metin = soup.get_text(" ", strip=True)
+    blok = ana_icerik(soup)
+    metin = blok.get_text(" ", strip=True)
     pdfler = []
-    for a in soup.find_all("a", href=True):
+    for a in blok.find_all("a", href=True):
         h = a["href"].strip()
         if ".pdf" in h.lower() or "dosya" in h.lower() or "indir" in h.lower():
             pdfler.append(urljoin(url, h))
