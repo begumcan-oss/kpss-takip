@@ -1,11 +1,17 @@
 # Kontrol edilen ilan kaynakları.
 # baslangic        : taramanın başladığı sayfa(lar)
+# rss              : sitenin RSS beslemesi (varsa en güvenilir yol budur)
 # render           : true ise sayfa gerçek bir tarayıcıda açılır (JavaScript ile çalışan siteler)
 # aday_url_desen   : bağlantı adresi bu ifadeye uyuyorsa ilan sayılır
 # metin_filtresi   : true ise bağlantı metninde "personel alımı" gibi ifadeler aranır
-# takip_kelimeleri : bu kelimeler geçen bağlantılara bir seviye daha girilir ("Duyurular" gibi)
+# takip_kelimeleri : bu kelimeler geçen bağlantılara bir seviye daha girilir
+# bolumle          : tek sayfada birden çok ilan varsa (Resmî Gazete) sayfayı ilanlara böler
 
 kaynaklar:
+  - ad: kariyerkapisi.gov.tr
+    rss: ["https://kariyerkapisi.gov.tr/RSS/RssLinkiAl"]
+    render: true
+
   - ad: kamuilan.sbb.gov.tr
     baslangic: ["https://kamuilan.sbb.gov.tr/"]
     render: false
@@ -14,43 +20,34 @@ kaynaklar:
     takip_kelimeleri: ["tum ilanlar", "ilanlar"]
     max_takip: 3
 
-  - ad: kariyerkapisi.gov.tr
-    baslangic: ["https://kariyerkapisi.gov.tr/isealim"]
-    render: true
-    metin_filtresi: false
-    aday_url_desen: "(ilan|isealim)/[^/]+"
-    takip_kelimeleri: ["ilanlar", "tum ilanlar"]
-    max_takip: 2
-
   - ad: ilan.gov.tr
-    baslangic: ["https://www.ilan.gov.tr/"]
+    baslangic: ["https://www.ilan.gov.tr/ilan/tum-ilanlar/personel-alimi?ats=5"]
     render: true
-    metin_filtresi: true
-    takip_kelimeleri: ["personel"]
-    max_takip: 3
+    aday_url_desen: "ilan\\.gov\\.tr/ilan/\\d+/"
+    metin_filtresi: false
+    derinlik: 0
 
   - ad: resmigazete.gov.tr
     baslangic: ["https://www.resmigazete.gov.tr/"]
     render: false
-    aday_url_desen: "/ilanlar/eskiilanlar/\\d{4}/\\d{2}/\\d{8}-\\d+-\\d+\\.htm"
-    metin_filtresi: false
-    takip_url_desen: "/ilanlar/"
-    max_takip: 6
+    aday_metin_kelimeleri: ["cesitli ilan"]
+    derinlik: 0
+    bolumle: true
 
-  - ad: iskur.gov.tr
-    baslangic: ["https://www.iskur.gov.tr/"]
-    render: true
-    metin_filtresi: true
-    kpsssiz: true
-    takip_kelimeleri: ["ilan", "kamu"]
-    max_takip: 4
-
-  - ad: yerelyonetimler.csb.gov.tr
-    baslangic: ["https://yerelyonetimler.csb.gov.tr/"]
+  - ad: iskur.gov.tr (memur)
+    baslangic: ["https://www.iskur.gov.tr/ilanlar/kamu-memur-alim-ilanlari/"]
     render: false
     metin_filtresi: true
-    takip_kelimeleri: ["duyuru", "ilan"]
-    max_takip: 4
+    takip_kelimeleri: ["sonraki", "devami"]
+    max_takip: 2
+
+  - ad: iskur.gov.tr (işçi)
+    baslangic: ["https://www.iskur.gov.tr/ilanlar/kurumdisi-kamu-isci-alim-ilanlari/"]
+    render: false
+    metin_filtresi: true
+    kpsssiz: true
+    takip_kelimeleri: ["sonraki", "devami"]
+    max_takip: 2
 
   - ad: osym.gov.tr
     tur: osym
