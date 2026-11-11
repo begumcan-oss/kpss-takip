@@ -28,6 +28,8 @@ class Aday:
     kpsssiz: bool = False
     ilk_tarama: bool = False  # site ilk kez taranıyorsa eski duyurular gönderilmez
     site: str = ""
+    on_metin: str = None      # RSS açıklaması ya da sayfadan ayrılmış ilan metni
+    detay: bool = True        # False ise ilan sayfası ayrıca açılmaz, on_metin kullanılır
 
     def anahtarlar(self):
         temiz = self.url.split("#")[0].rstrip("/")
@@ -73,8 +75,90 @@ def _alan(u):
     return h[4:] if h.startswith("www.") else h
 
 
+def rss_tara(ayar, timeout=25):
+    """RSS/Atom beslemesindeki her öğeyi aday ilan olarak döndürür."""
+    from .indir import http_get
+    adaylar, son_hata = [], ""
+    for url in ayar["rss"]:
+        try:
+            r = http_get(url, timeout=timeout)
+        except Exception as e:
+            son_hata = kisa_hata(e)
+            continue
+        icerik = r.content
+        if b"<item" not in icerik and b"<entry" not in icerik:
+            # RSS bağlantısını veren bir sayfa olabilir: içindeki besleme adresini bul
+            soup = BeautifulSoup(r.text, "lxml")
+            bag = [urljoin(r.url, a["href"]) for a in soup.find_all("a", href=True)
+                   if "rss" in a["href"].lower() or "xml" in a["href"].lower()]
+            bag += re.findall(r"https?://[^\s\"'<>]+(?:rss|xml)[^\s\"'<>]*", r.text, re.I)
+            for b in bag[:3]:
+                try:
+                    r2 = http_get(b, timeout=timeout)
+                    if b"<item" in r2.content or b"<entry" in r2.content:
+                        icerik = r2.content
+                        break
+                except Exception:
+                    continue
+        soup = BeautifulSoup(icerik, "xml")
+        for it in soup.find_all(["item", "entry"]):
+            baslik = (it.find("title").get_text(" ", strip=True) if it.find("title") else "")
+            link_el = it.find("link")
+            link = ""
+            if link_el is not None:
+                link = link_el.get("href") or link_el.get_text(strip=True)
+            aciklama = ""
+            for etiket in ("description", "summary", "content"):
+                el = it.find(etiket)
+                if el is not None:
+                    aciklama = BeautifulSoup(el.get_text(" ", strip=True), "lxml").get_text(" ", strip=True)
+                    break
+            if baslik and link:
+                adaylar.append(Aday(baslik=baslik[:250], url=link, kaynak=ayar["ad"],
+                                    tur=ayar.get("tur", "ana"), render=ayar.get("render", False),
+                                    kpsssiz=ayar.get("kpsssiz", False), on_metin=aciklama))
+    if not adaylar and son_hata:
+        raise RuntimeError(f"siteye ulaşılamadı ({son_hata})")
+    return adaylar
+
+
+_RG_ILAN_NO = re.compile(r"\n\s*\d{3,6}/\d{1,3}-\d{1,3}\s*(?=\n)")
+_RG_BASLIK = re.compile(r"(?m)^[^\n]{5,160}?(?:ndan|nden|dan|den|tan|ten):\s*$")
+
+
+def ilan_sayfasini_bol(url, kaynak, timeout=30):
+    """Resmî Gazete'nin 'Çeşitli İlanlar' gibi çok ilanlı sayfasını tek tek ilanlara böler."""
+    from .indir import http_get
+    r = http_get(url, timeout=timeout)
+    soup = BeautifulSoup(r.text, "lxml")
+    for t in soup(["script", "style"]):
+        t.decompose()
+    metin = re.sub(r"[ \t\xa0]+", " ", soup.get_text("\n"))
+    metin = re.sub(r"\n\s*\n+", "\n", metin)
+    parcalar = _RG_ILAN_NO.split(metin)
+    if len(parcalar) < 2:
+        basliklar = [m.start() for m in _RG_BASLIK.finditer(metin)]
+        parcalar = [metin[a:b] for a, b in zip(basliklar, basliklar[1:] + [len(metin)])] or [metin]
+    adaylar = []
+    for i, p in enumerate(parcalar):
+        p = p.strip()
+        if len(p) < 150:
+            continue
+        m = _RG_BASLIK.search(p)
+        if m:
+            devam = re.sub(r"\s+", " ", p[m.end():m.end() + 160]).strip()
+            baslik = f"{m.group(0).strip()} {devam[:110]}…"
+        else:
+            baslik = re.sub(r"\s+", " ", p[:120])
+        adaylar.append(Aday(baslik=baslik, url=f"{r.url}#ilan-{i + 1}", kaynak=kaynak,
+                            on_metin=p[:60000], detay=False))
+    return adaylar
+
+
 def kaynak_tara(ayar, tarayici=None, hata_ayiklama_klasoru=None, timeout=25):
     """Bir kaynağı tarar, Aday listesi döndürür. Hiçbir sayfa açılamazsa hata fırlatır."""
+    if ayar.get("rss"):
+        return rss_tara(ayar, timeout)
     ad = ayar["ad"]
     render = ayar.get("render", False)
     aday_desen = re.compile(ayar["aday_url_desen"], re.I) if ayar.get("aday_url_desen") else None
@@ -138,4 +222,12 @@ def kaynak_tara(ayar, tarayici=None, hata_ayiklama_klasoru=None, timeout=25):
 
     if acilan == 0:
         raise RuntimeError(f"siteye ulaşılamadı ({son_hata or 'bilinmiyor'})")
+    if ayar.get("bolumle"):
+        bolunmus = []
+        for a in adaylar.values():
+            try:
+                bolunmus.extend(ilan_sayfasini_bol(a.url, ad))
+            except Exception as e:
+                log.info("%s: %s bölünemedi (%s)", ad, a.url, e)
+        return bolunmus
     return list(adaylar.values())

@@ -48,26 +48,26 @@ def mesaj_yap(aday, d, profil):
 
 
 def _metinleri_getir(adaylar, tarayici):
-    sonuc = {}
-    tarayicili = [a for a in adaylar if a.render and a.tur != "osym"]
-    duz = [a for a in adaylar if not a.render and a.tur != "osym"]
+    sonuc = {a.url: a.on_metin for a in adaylar if not a.detay}
+    tarayicili = [a for a in adaylar if a.detay and a.render and a.tur != "osym"]
+    duz = [a for a in adaylar if a.detay and not a.render and a.tur != "osym"]
 
     def getir(a):
         try:
-            return a.url, ilan_metni(a.url)
+            return a.url, ilan_metni(a.url) + " " + (a.on_metin or "")
         except Exception as ex:
             log.info("İlan okunamadı %s: %s", a.url, ex)
-            return a.url, None
+            return a.url, a.on_metin  # sayfa açılmazsa en azından RSS açıklamasıyla değerlendir
 
     with ThreadPoolExecutor(max_workers=10) as ex:
         for url, metin in ex.map(getir, duz):
             sonuc[url] = metin
     for a in tarayicili:
         try:
-            sonuc[a.url] = ilan_metni(a.url, render=True, tarayici=tarayici)
+            sonuc[a.url] = ilan_metni(a.url, render=True, tarayici=tarayici) + " " + (a.on_metin or "")
         except Exception as ex:
             log.info("İlan okunamadı %s: %s", a.url, ex)
-            sonuc[a.url] = None
+            sonuc[a.url] = a.on_metin
     return sonuc
 
 

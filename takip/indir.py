@@ -20,7 +20,8 @@ _yerel = threading.local()
 def _oturum():
     if not hasattr(_yerel, "s"):
         s = requests.Session()
-        s.headers.update({"User-Agent": UA, "Accept-Language": "tr-TR,tr;q=0.9,en;q=0.5"})
+        s.headers.update({"User-Agent": UA, "Accept-Language": "tr-TR,tr;q=0.9,en;q=0.5",
+                          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"})
         _yerel.s = s
     return _yerel.s
 
