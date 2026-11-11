@@ -1,0 +1,78 @@
+name: KPSS Takip
+
+on:
+  schedule:
+    - cron: "7 * * * *"            # ana ilan siteleri: saatte bir
+    - cron: "37 3,9,15 * * *"      # belediyeler: TR saatiyle 06:37, 12:37, 18:37
+  workflow_dispatch:
+    inputs:
+      mod:
+        description: "ana / belediye / hepsi"
+        default: "ana"
+        type: choice
+        options: [ana, belediye, hepsi]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: kpss-takip
+  cancel-in-progress: false
+
+jobs:
+  takip:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Mod belirle
+        id: mod
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "mod=${{ inputs.mod }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "37 3,9,15 * * *" ]; then
+            echo "mod=belediye" >> "$GITHUB_OUTPUT"
+          else
+            echo "mod=ana" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Kütüphaneleri kur
+        run: pip install -r requirements.txt
+
+      - name: Tarayıcıyı kur
+        if: steps.mod.outputs.mod != 'belediye'
+        run: python -m playwright install --with-deps chromium
+
+      - name: İlanları kontrol et
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          PROFILES_YAML: ${{ secrets.PROFILES_YAML }}
+        run: python -m takip.main --mod "${{ steps.mod.outputs.mod }}"
+
+      - name: Ham sayfaları sakla (hata ayıklama için)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ham-sayfalar-${{ steps.mod.outputs.mod }}
+          path: debug/
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Durumu kaydet
+        if: always()
+        run: |
+          git config user.name "kpss-takip-bot"
+          git config user.email "kpss-takip-bot@users.noreply.github.com"
+          git add state/
+          if ! git diff --cached --quiet; then
+            git commit -m "durum güncellendi"
+            git pull --rebase
+            git push
+          fi
