@@ -216,7 +216,7 @@ def kaynak_tara(ayar, tarayici=None, hata_ayiklama_klasoru=None, timeout=25):
             p = pathlib.Path(hata_ayiklama_klasoru)
             p.mkdir(parents=True, exist_ok=True)
             (p / f"{re.sub(r'[^a-z0-9]+', '_', ad.lower())}.html").write_text(html, encoding="utf-8")
-            if tarayici is not None and getattr(tarayici, "son_istekler", None):
+            if render and tarayici is not None and getattr(tarayici, "son_istekler", None):
                 _kaydet(p, ad, "_istekler.txt", "\n".join(tarayici.son_istekler))
 
         for metin, u in baglantilar(son_url, html):
