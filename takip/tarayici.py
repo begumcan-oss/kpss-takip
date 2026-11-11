@@ -31,6 +31,7 @@ class Aday:
     on_metin: str = None      # RSS açıklaması ya da sayfadan ayrılmış ilan metni
     detay: bool = True        # False ise ilan sayfası ayrıca açılmaz, on_metin kullanılır
     surum: str = ""           # kaynak ayarındaki anahtar_surumu
+    baslikla: bool = False    # ayrıntı okunamazsa başlığa göre "kontrol edin" olarak değerlendir
 
     def anahtarlar(self):
         temiz = self.url.split("#")[0].rstrip("/")
@@ -136,7 +137,8 @@ def rss_tara(ayar, timeout=25, hata_ayiklama_klasoru=None):
                 adaylar.append(Aday(baslik=baslik[:250], url=link, kaynak=ayar["ad"],
                                     tur=ayar.get("tur", "ana"), render=ayar.get("render", False),
                                     kpsssiz=ayar.get("kpsssiz", False), on_metin=aciklama,
-                                    surum=str(ayar.get("anahtar_surumu", ""))))
+                                    surum=str(ayar.get("anahtar_surumu", "")),
+                                    baslikla=ayar.get("baslikla_degerlendir", False)))
     if not adaylar and son_hata:
         raise RuntimeError(f"siteye ulaşılamadı ({son_hata})")
     return adaylar

@@ -47,6 +47,13 @@ DIGER_KADROLAR = ["memur", "uzman", "teknisyen", "tekniker", "muhendis", "sekret
                   "bilgisayar isletmeni", "mimar", "tasarim", "is sagligi", "avukat", "ressam"]
 
 
+# Ayrıntısı okunamayan ilanlarda başlıkta geçerse "size uymuyor" sayılacak ifadeler
+BASLIK_UYUMSUZ = ["uzman yardimci", "denetmen yardimci", "mufettis yardimci", "yurt disi", "yurtdisi egitim",
+                  "bilisim personel", "avukat", "kutuphaneci", "programci", "cozumleyici", "kalkinma ajansi",
+                  "hemsire", "ebe ", "doktor", "hekim", "eczaci", "veteriner", "psikolog", "ogretmen",
+                  "pilot", "astsubay", "subay", "uzman erbas", "polis", "bekci", "guvenlik korucusu"]
+
+
 @dataclass
 class KisiSonuc:
     kisi: dict
@@ -327,7 +334,8 @@ def degerlendir(aday, metin, profil, bugun, ilce_haritasi):
     if bulunan and not hedef_bulunan:
         return Degerlendirme(False, "şehirler dışında")
 
-    son = son_basvuru_bul(tn, bugun)
+    sadece_baslik = getattr(aday, "baslikla", False) and len(tn) - len(baslik_n) < 600
+    son = None if sadece_baslik else son_basvuru_bul(tn, bugun)
     if son and son < bugun:
         return Degerlendirme(False, "başvuru süresi geçmiş")
 
@@ -354,5 +362,16 @@ def degerlendir(aday, metin, profil, bugun, ilce_haritasi):
         return d
     if aday.tur == "belediye" and not bilgi["lisans"] and not bilgi["onlisans"]:
         d.kontrol_et = True
+        return d
+    if sadece_baslik:
+        uyumsuz = [k for k in BASLIK_UYUMSUZ if k in baslik_n]
+        if "muhendis" in baslik_n and "tekniker" not in baslik_n:
+            uyumsuz.append("muhendis")
+        if "a grubu" in tn:
+            uyumsuz.append("A grubu")
+        if uyumsuz:
+            return Degerlendirme(False, f"başlığa göre uymuyor ({uyumsuz[0]})")
+        d.kontrol_et = True
+        d.ek_notlar.append("ℹ️ Bu sitenin ayrıntıları otomatik okunamıyor, başlığa göre size uygun olabilir")
         return d
     return Degerlendirme(False, "profile uymuyor")
