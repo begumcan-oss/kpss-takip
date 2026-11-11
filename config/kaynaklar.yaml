@@ -5,6 +5,7 @@
 # aday_url_desen   : bağlantı adresi bu ifadeye uyuyorsa ilan sayılır
 # metin_filtresi   : true ise bağlantı metninde "personel alımı" gibi ifadeler aranır
 # takip_kelimeleri : bu kelimeler geçen bağlantılara bir seviye daha girilir
+# bekle            : tarayıcıda sayfa yüklendikten sonra beklenecek süre (milisaniye)
 # bolumle          : tek sayfada birden çok ilan varsa (Resmî Gazete) sayfayı ilanlara böler
 
 kaynaklar:
@@ -12,13 +13,12 @@ kaynaklar:
     rss: ["https://kariyerkapisi.gov.tr/RSS/RssLinkiAl"]
     render: true
 
-  - ad: kamuilan.sbb.gov.tr
-    baslangic: ["https://kamuilan.sbb.gov.tr/"]
-    render: false
-    aday_url_desen: "ilanDetay"
-    metin_filtresi: false
-    takip_kelimeleri: ["tum ilanlar", "ilanlar"]
-    max_takip: 3
+  - ad: kariyerkapisi.gov.tr (sayfa)
+    baslangic: ["https://kariyerkapisi.gov.tr/isealim"]
+    render: true
+    bekle: 9000
+    metin_filtresi: true
+    derinlik: 0
 
   - ad: ilan.gov.tr
     baslangic: ["https://www.ilan.gov.tr/ilan/tum-ilanlar/personel-alimi?ats=5"]
