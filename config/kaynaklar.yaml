@@ -1,0 +1,61 @@
+# Kontrol edilen ilan kaynakları.
+# baslangic        : taramanın başladığı sayfa(lar)
+# render           : true ise sayfa gerçek bir tarayıcıda açılır (JavaScript ile çalışan siteler)
+# aday_url_desen   : bağlantı adresi bu ifadeye uyuyorsa ilan sayılır
+# metin_filtresi   : true ise bağlantı metninde "personel alımı" gibi ifadeler aranır
+# takip_kelimeleri : bu kelimeler geçen bağlantılara bir seviye daha girilir ("Duyurular" gibi)
+
+kaynaklar:
+  - ad: kamuilan.sbb.gov.tr
+    baslangic: ["https://kamuilan.sbb.gov.tr/"]
+    render: false
+    aday_url_desen: "ilanDetay"
+    metin_filtresi: false
+    takip_kelimeleri: ["tum ilanlar", "ilanlar"]
+    max_takip: 3
+
+  - ad: kariyerkapisi.gov.tr
+    baslangic: ["https://kariyerkapisi.gov.tr/isealim"]
+    render: true
+    metin_filtresi: false
+    aday_url_desen: "(ilan|isealim)/[^/]+"
+    takip_kelimeleri: ["ilanlar", "tum ilanlar"]
+    max_takip: 2
+
+  - ad: ilan.gov.tr
+    baslangic: ["https://www.ilan.gov.tr/"]
+    render: true
+    metin_filtresi: true
+    takip_kelimeleri: ["personel"]
+    max_takip: 3
+
+  - ad: resmigazete.gov.tr
+    baslangic: ["https://www.resmigazete.gov.tr/"]
+    render: false
+    aday_url_desen: "/ilanlar/eskiilanlar/\\d{4}/\\d{2}/\\d{8}-\\d+-\\d+\\.htm"
+    metin_filtresi: false
+    takip_url_desen: "/ilanlar/"
+    max_takip: 6
+
+  - ad: iskur.gov.tr
+    baslangic: ["https://www.iskur.gov.tr/"]
+    render: true
+    metin_filtresi: true
+    kpsssiz: true
+    takip_kelimeleri: ["ilan", "kamu"]
+    max_takip: 4
+
+  - ad: yerelyonetimler.csb.gov.tr
+    baslangic: ["https://yerelyonetimler.csb.gov.tr/"]
+    render: false
+    metin_filtresi: true
+    takip_kelimeleri: ["duyuru", "ilan"]
+    max_takip: 4
+
+  - ad: osym.gov.tr
+    tur: osym
+    baslangic: ["https://www.osym.gov.tr/"]
+    render: false
+    aday_metin_kelimeleri: ["kpss", "tercih", "kilavuz"]
+    takip_kelimeleri: ["duyurular"]
+    max_takip: 2
