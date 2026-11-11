@@ -49,8 +49,7 @@ def mesaj_yap(aday, d, profil):
 
 def _metinleri_getir(adaylar, tarayici):
     sonuc = {a.url: a.on_metin for a in adaylar if not a.detay}
-    tarayicili = [a for a in adaylar if a.detay and a.render and a.tur != "osym"]
-    duz = [a for a in adaylar if a.detay and not a.render and a.tur != "osym"]
+    duz = [a for a in adaylar if a.detay and a.tur != "osym"]
 
     def getir(a):
         try:
@@ -62,12 +61,15 @@ def _metinleri_getir(adaylar, tarayici):
     with ThreadPoolExecutor(max_workers=10) as ex:
         for url, metin in ex.map(getir, duz):
             sonuc[url] = metin
+    # Hızlı yoldan okunan metin çok kısaysa (sayfa JavaScript ile doluyorsa) tarayıcıyla tekrar dene
+    tarayicili = [a for a in duz if a.render and len((sonuc.get(a.url) or "")) - len(a.on_metin or "") < 800]
+    if tarayicili:
+        log.info("Tarayıcıyla okunacak ilan: %d", len(tarayicili))
     for a in tarayicili:
         try:
             sonuc[a.url] = ilan_metni(a.url, render=True, tarayici=tarayici) + " " + (a.on_metin or "")
         except Exception as ex:
             log.info("İlan okunamadı %s: %s", a.url, ex)
-            sonuc[a.url] = a.on_metin
     return sonuc
 
 
@@ -143,7 +145,7 @@ def calistir(mod, kuru=False):
     tekil = tekil[:MAX_DETAY]
 
     metinler = _metinleri_getir(tekil, tarayici)
-    gonderilecek = []
+    gonderilecek, ornek_sayac = [], {}
     for a in tekil:
         if a.tur == "osym":
             bn = norm(a.baslik)
@@ -161,6 +163,15 @@ def calistir(mod, kuru=False):
                 durum.d["hata_sayac"].pop(k, None)
             continue
         d = degerlendir(a, metin, profil, bugun, ilce_haritasi)
+        sonuc_yazi = ("GÖNDER " + ",".join(k.kisi["ad"] for k in d.kisiler)) if d.gonder else d.neden
+        log.info("  [%s] %s | %d karakter | %s", a.kaynak, a.baslik[:70], len(metin), sonuc_yazi)
+        ornek_sayac[a.kaynak] = ornek_sayac.get(a.kaynak, 0) + 1
+        if ornek_sayac[a.kaynak] <= 3 and a.tur != "belediye":
+            klasor = ayarlar.KOK / "debug"
+            klasor.mkdir(exist_ok=True)
+            ad_ = "".join(c if c.isalnum() else "_" for c in a.kaynak.lower())
+            (klasor / f"detay_{ad_}_{ornek_sayac[a.kaynak]}.txt").write_text(
+                f"{a.baslik}\n{a.url}\n\n{metin}", encoding="utf-8")
         if not d.gonder or (a.ilk_tarama and d.son_basvuru is None):
             durum.isaretle(a.anahtarlar())
             continue

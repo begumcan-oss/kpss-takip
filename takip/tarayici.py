@@ -30,13 +30,14 @@ class Aday:
     site: str = ""
     on_metin: str = None      # RSS açıklaması ya da sayfadan ayrılmış ilan metni
     detay: bool = True        # False ise ilan sayfası ayrıca açılmaz, on_metin kullanılır
+    surum: str = ""           # kaynak ayarındaki anahtar_surumu
 
     def anahtarlar(self):
         temiz = self.url.split("#")[0].rstrip("/")
-        k = [anahtar("u", temiz)]
+        k = [anahtar("u" + self.surum, temiz)]
         b = norm(self.baslik)
         if len(b) >= 20:
-            k.append(anahtar("b", self.kaynak, b))
+            k.append(anahtar("b" + self.surum, self.kaynak, b))
         return k
 
 
@@ -124,12 +125,18 @@ def rss_tara(ayar, timeout=25, hata_ayiklama_klasoru=None):
             for etiket in ("description", "summary", "content"):
                 el = it.find(etiket)
                 if el is not None:
-                    aciklama = BeautifulSoup(el.get_text(" ", strip=True), "lxml").get_text(" ", strip=True)
+                    aciklama = el.get_text(" ", strip=True)
+                    if "<" in aciklama:
+                        aciklama = BeautifulSoup(aciklama, "lxml").get_text(" ", strip=True)
                     break
             if baslik and link:
+                kategori = it.find("category")
+                if kategori is not None:
+                    aciklama = f"{kategori.get_text(' ', strip=True)}. {aciklama}"
                 adaylar.append(Aday(baslik=baslik[:250], url=link, kaynak=ayar["ad"],
                                     tur=ayar.get("tur", "ana"), render=ayar.get("render", False),
-                                    kpsssiz=ayar.get("kpsssiz", False), on_metin=aciklama))
+                                    kpsssiz=ayar.get("kpsssiz", False), on_metin=aciklama,
+                                    surum=str(ayar.get("anahtar_surumu", ""))))
     if not adaylar and son_hata:
         raise RuntimeError(f"siteye ulaşılamadı ({son_hata})")
     return adaylar
@@ -234,7 +241,8 @@ def kaynak_tara(ayar, tarayici=None, hata_ayiklama_klasoru=None, timeout=25):
                 if u not in adaylar:
                     adaylar[u] = Aday(baslik=metin or u, url=u, kaynak=ad,
                                       tur=ayar.get("tur", "ana"), render=render,
-                                      kpsssiz=ayar.get("kpsssiz", False))
+                                      kpsssiz=ayar.get("kpsssiz", False),
+                                      surum=str(ayar.get("anahtar_surumu", "")))
                 continue
             if d < derinlik and takip_sayisi < max_takip and u not in ziyaret:
                 ayni_site = _alan(u) in kok_alanlar or any(_alan(u).endswith(k) for k in kok_alanlar)
