@@ -11,8 +11,9 @@
 kaynaklar:
   - ad: kariyerkapisi.gov.tr
     rss: ["https://kariyerkapisi.gov.tr/RSS"]
-    render: true
-    anahtar_surumu: 2
+    render: false
+    anahtar_surumu: 3
+    baslikla_degerlendir: true   # ilan sayfaları yurt dışından boş geliyor; başlığa göre değerlendir
 
   - ad: ilan.gov.tr
     baslangic: ["https://www.ilan.gov.tr/ilan/tum-ilanlar/personel-alimi?ats=5"]
