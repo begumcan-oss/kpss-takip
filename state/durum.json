@@ -87,8 +87,13 @@
    "Yalova/Termal"
   ],
   "bulunan": 185,
-  "erisilemeyen": [],
-  "tarih": "2026-11-19",
+  "erisilemeyen": [
+   "Kocaeli/Karamürsel",
+   "Balıkesir/Kepsut",
+   "Bursa/Orhaneli",
+   "Mersin/Mut"
+  ],
+  "tarih": "2026-11-20",
   "toplam": 269
  },
  "belediye_ilk": {
