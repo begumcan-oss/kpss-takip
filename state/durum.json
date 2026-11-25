@@ -88,14 +88,16 @@
   ],
   "bulunan": 185,
   "erisilemeyen": [
-   "İstanbul/İl belediyesi",
+   "Kocaeli/Kandıra",
    "Sakarya/Ferizli",
-   "Adana/Çukurova",
-   "Bursa/Keles",
-   "İzmir/Kınık",
+   "Sakarya/Kocaali",
+   "Balıkesir/Gömeç",
+   "Bursa/Harmancık",
+   "Çanakkale/Çan",
+   "Kırklareli/Demirköy",
    "Muğla/Seydikemer"
   ],
-  "tarih": "2026-11-24",
+  "tarih": "2026-11-25",
   "toplam": 269
  },
  "belediye_ilk": {
