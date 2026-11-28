@@ -82,10 +82,19 @@
   ],
   "bulunan": 191,
   "erisilemeyen": [
+   "Kocaeli/Kandıra",
+   "Sakarya/Kocaali",
+   "Adana/İl belediyesi",
+   "Adana/Pozantı",
+   "Balıkesir/Gömeç",
    "Balıkesir/Havran",
-   "Muğla/Seydikemer"
+   "Balıkesir/Sındırgı",
+   "Bursa/Harmancık",
+   "Çanakkale/Ayvacık",
+   "Çanakkale/Çan",
+   "Tekirdağ/Malkara"
   ],
-  "tarih": "2026-11-27",
+  "tarih": "2026-11-28",
   "toplam": 269
  },
  "belediye_ilk": {
